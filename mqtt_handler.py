@@ -37,6 +37,7 @@ def on_connect(client, userdata, flags, rc):
 
 sensors_info = []
 
+
 def on_message(client, userdata, message):
     now = datetime.datetime.now()
     inputdata = message.payload.decode('UTF-8')
