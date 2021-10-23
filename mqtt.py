@@ -4,7 +4,7 @@ import paho.mqtt.client as mqtt
 def on_connect(client, userdata, flags, rc):
     print("Connected with the result code "+str(rc))
     # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
+    # reconnect then subscriptions will be renewed .
     client.subscribe("$SYS/#")
 
 
