@@ -1,26 +1,21 @@
 import paho.mqtt.client as mqttClient
 import time
-import psycopg2
+import sqlite3
 import datetime
-from psycopg2 import Error
 
 
 def export_info(sensor_info):
-    try:
-        conn = psycopg2.connect(dbname='postgres', user='postgres', host='localhost', password='admin')
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT INTO sensor_info (air_temp, ground_temp, air_humidity, soil_humidity, illumination, date, time)
-            VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """,
-            sensor_info
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-        print("Соединение с PostgreSQL закрыто")
-    except (Exception, Error) as error:
-        print("Ошибка при работе с PostgreSQL", error)
+    conn = sqlite3.connect("taskmanager/db.sqlite3")
+    cur = conn.cursor()
+    cur.execute(
+        f"""INSERT INTO {sensor_info[0]} (value, date, time)
+        VALUES (?, ?, ?);
+        """,
+        sensor_info[1:]
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 def on_connect(client, userdata, flags, rc):
@@ -35,30 +30,30 @@ def on_connect(client, userdata, flags, rc):
 
         print("Connection failed")
 
+
 sensors_info = []
 
 
 def on_message(client, userdata, message):
+    print(message.topic+' '+message.payload.decode('UTF-8'))
     now = datetime.datetime.now()
-    inputdata = message.payload.decode('UTF-8')
-    sensors_info = [*inputdata.split('\n'), now.strftime('%d/%m/%Y'), now.strftime('%H:%M:%S')]
-    for i in range(5):
-        _, sensors_info[i] = sensors_info[i].split(':')
-        sensors_info[i] = int(sensors_info[i])
+    _, _, topic = message.topic.split('/')
+    value = message.payload.decode('UTF-8')
+    sensors_info = [topic, value, now.strftime('%d/%m/%Y'), now.strftime('%H:%M:%S')]
     export_info(sensors_info)
 
 
 Connected = False  # global variable for the state of the connection
 
-broker = 'test.mosquitto.org'
+broker = 'mqtt0.bast-dev.ru'
 port = 1883
-topic_prefix = "service/weather_logger"
+topic_prefix = "service/weather_logger/#"
 username = 'hackathon'
 password = 'Autumn2021'
 
 
 client = mqttClient.Client("Python")  # create new instance
-# client.username_pw_set(username, password=password)  # set username and password
+client.username_pw_set(username, password=password)  # set username and password
 client.on_connect = on_connect  # attach function to callback
 client.on_message = on_message  # attach function to callback
 
